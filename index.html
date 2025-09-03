@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>To-Do List with Priority & Deadline</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f7fafc;
+    padding: 2rem;
+    max-width: 600px;
+    margin: auto;
+  }
+  h1 {
+    color: #2c3e50;
+    text-align: center;
+  }
+  form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  input[type="text"], input[type="date"], select {
+    flex: 1 1 100%;
+    padding: 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    font-size: 1rem;
+  }
+  select {
+    width: 150px;
+  }
+  button {
+    padding: 0.5rem 1rem;
+    background-color: #3182ce;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    flex: 1 1 100%;
+    font-size: 1rem;
+  }
+  button:hover {
+    background-color: #2b6cb0;
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+  li {
+    background: #e2e8f0;
+    margin-bottom: 0.5rem;
+    padding: 0.8rem;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .completed {
+    text-decoration: line-through;
+    color: gray;
+  }
+  .task-info {
+    flex: 1;
+  }
+  .filters {
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 0.5rem;
+  }
+  .priority-high { color: #e53e3e; font-weight: bold; }
+  .priority-medium { color: #dd6b20; font-weight: bold; }
+  .priority-low { color: #38a169; font-weight: bold; }
+  .deadline {
+    font-size: 0.9rem;
+    color: #4a5568;
+  }
+  .delete-btn {
+    background: transparent;
+    border: none;
+    color: #e53e3e;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .delete-btn:hover {
+    color: #a02424;
+  }
+</style>
+</head>
+<body>
+
+<h1>To-Do List with Priority & Deadline</h1>
+
+<form id="task-form">
+  <input type="text" id="task-input" placeholder="Enter task description" required />
+  <select id="priority-select" required>
+    <option value="" disabled selected>Priority</option>
+    <option value="High">High</option>
+    <option value="Medium">Medium</option>
+    <option value="Low">Low</option>
+  </select>
+  <input type="date" id="deadline-input" required />
+  <button type="submit">Add Task</button>
+</form>
+
+<div class="filters">
+  <select id="filter-priority">
+    <option value="">All Priorities</option>
+    <option value="High">High Priority</option>
+    <option value="Medium">Medium Priority</option>
+    <option value="Low">Low Priority</option>
+  </select>
+  <input type="date" id="filter-deadline" />
+  <button id="clear-filters">Clear Filters</button>
+</div>
+
+<ul id="task-list"></ul>
+
+<script>
+  const taskForm = document.getElementById('task-form');
+  const taskInput = document.getElementById('task-input');
+  const prioritySelect = document.getElementById('priority-select');
+  const deadlineInput = document.getElementById('deadline-input');
+
+  const filterPriority = document.getElementById('filter-priority');
+  const filterDeadline = document.getElementById('filter-deadline');
+  const clearFiltersBtn = document.getElementById('clear-filters');
+
+  const taskList = document.getElementById('task-list');
+
+  let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+  function saveTasks() {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+  }
+
+  function addTask(event) {
+    event.preventDefault();
+
+    const task = {
+      id: Date.now(),
+      description: taskInput.value.trim(),
+      priority: prioritySelect.value,
+      deadline: deadlineInput.value,
+      completed: false
+    };
+
+    tasks.push(task);
+    saveTasks();
+    taskForm.reset();
+    renderTasks();
+  }
+
+  function toggleComplete(id) {
+    tasks = tasks.map(task => task.id === id ? { ...task, completed: !task.completed } : task);
+    saveTasks();
+    renderTasks();
+  }
+
+  function deleteTask(id) {
+    tasks = tasks.filter(task => task.id !== id);
+    saveTasks();
+    renderTasks();
+  }
+
+  function applyFilters() {
+    return tasks.filter(task => {
+      const priorityMatch = filterPriority.value ? task.priority === filterPriority.value : true;
+      const deadlineMatch = filterDeadline.value ? task.deadline === filterDeadline.value : true;
+      return priorityMatch && deadlineMatch;
+    });
+  }
+
+  function renderTasks() {
+    taskList.innerHTML = '';
+    const filteredTasks = applyFilters();
+
+    if (filteredTasks.length === 0) {
+      taskList.innerHTML = '<li>No tasks found.</li>';
+      return;
+    }
+
+    filteredTasks.forEach(task => {
+      const li = document.createElement('li');
+
+      const taskInfo = document.createElement('div');
+      taskInfo.className = 'task-info';
+      taskInfo.innerHTML = `
+        <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleComplete(${task.id})" />
+        <span class="${task.completed ? 'completed' : ''}">${task.description}</span>
+        <span class="deadline">${task.deadline}</span>
+        <span class="priority-${task.priority.toLowerCase()}">[${task.priority}]</span>
+      `;
+
+      li.appendChild(taskInfo);
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'delete-btn';
+      delBtn.textContent = '×';
+      delBtn.onclick = () => deleteTask(task.id);
+
+      li.appendChild(delBtn);
+      taskList.appendChild(li);
+    });
+  }
+
+  taskForm.addEventListener('submit', addTask);
+  filterPriority.addEventListener('change', renderTasks);
+  filterDeadline.addEventListener('change', renderTasks);
+  clearFiltersBtn.addEventListener('click', () => {
+    filterPriority.value = '';
+    filterDeadline.value = '';
+    renderTasks();
+  });
+
+  renderTasks();
+</script>
+
+</body>
+</html>
